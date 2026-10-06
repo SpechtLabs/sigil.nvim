@@ -40,11 +40,14 @@ jobs:
           version: ${{ env.MISE_VERSION }}
       - run: mise run queries-check
 
-  # The job names are what the main branch ruleset requires, so they name a
-  # channel, not a version that Renovate moves.
+  # The legs name a channel, not a version, so their check names stay the same
+  # when Renovate moves a version.
   test:
     name: Test (Neovim ${{ matrix.channel }})
     runs-on: ubuntu-latest
+    # A nightly regression shows up here but doesn't fail the job, so it never
+    # blocks a merge through the CI passed gate.
+    continue-on-error: ${{ matrix.channel == 'nightly' }}
     strategy:
       fail-fast: false
       matrix:
@@ -84,3 +87,24 @@ jobs:
         run: |
           mise exec ${NEOVIM_VERSION:+"neovim@$NEOVIM_VERSION"} -- nvim --version | head -1
           mise exec ${NEOVIM_VERSION:+"neovim@$NEOVIM_VERSION"} -- nvim -l tests/run.lua
+
+  # The one check the main branch ruleset requires, with Validate PR title:
+  # it passes only when every job it needs succeeded or was skipped, so a new
+  # job joins the gate by joining `needs`, without touching the ruleset.
+  passed:
+    name: CI passed
+    if: always()
+    needs: [lint, queries, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check every job's result
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          failed=$(echo "$RESULTS" | jq -r '[to_entries[] | select(.value.result != "success" and .value.result != "skipped") | .key] | join(", ")')
+          if [ -n "$failed" ]; then
+            echo "::error::Failed or cancelled: $failed"
+            exit 1
+          fi
