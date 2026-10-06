@@ -86,7 +86,7 @@ Defaults: >lua
       lsp = {
         enabled = true,
         cmd = nil,
-        root_markers = { "sigil.yaml", ".git" },
+        root_markers = { "sigil.yaml", ".sigil.yaml", "sigil.json", ".sigil.json", "sigil.toml", ".sigil.toml", ".git" },
         settings = {},
       },
       treesitter = {
@@ -123,9 +123,11 @@ lsp.cmd ~
 
                                                *sigil-config-lsp.root_markers*
 lsp.root_markers ~
-    Files that mark the workspace root, nearest first in list order:
-    `sigil.yaml` anywhere above the file, then `.git`. A file with neither
-    gets a server without a workspace folder.
+    Files that mark the workspace root, in list order: a sigil
+    configuration file (`sigil.yaml`, `.sigil.yaml`, `sigil.json`,
+    `.sigil.json`, `sigil.toml`, `.sigil.toml`) above the file, then `.git`.
+    A file with none gets a server without a workspace folder. The server
+    still finds the nearest configuration file itself for each document.
 
                                                    *sigil-config-lsp.settings*
 lsp.settings ~
@@ -274,7 +276,7 @@ predates the language server; upgrade it.
 
 Wrong workspace ~
 `:Sigil info` shows the root. The server reads the kinds named in the
-nearest `sigil.yaml`; put one next to your policies, or change
+nearest sigil configuration file; put one next to your policies, or change
 |sigil-config-lsp.root_markers|.
 
 No tree-sitter highlighting ~

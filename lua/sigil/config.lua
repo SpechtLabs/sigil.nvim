@@ -51,7 +51,7 @@ M.defaults = {
     enabled = true,
     -- nil runs `<path> lsp --stdio`.
     cmd = nil,
-    root_markers = { "sigil.yaml", ".git" },
+    root_markers = { "sigil.yaml", ".sigil.yaml", "sigil.json", ".sigil.json", "sigil.toml", ".sigil.toml", ".git" },
     settings = {},
   },
   treesitter = {

@@ -87,7 +87,15 @@ T["reports"] = MiniTest.new_set({
       false,
       { "`lsp.cmd` runs `/nope/sigil`, which isn't executable" },
     },
-    { "the LSP config", false, {}, false, { "OK config: cmd sigil lsp --stdio, root markers sigil.yaml, .git" } },
+    {
+      "the LSP config",
+      false,
+      {},
+      false,
+      {
+        "OK config: cmd sigil lsp --stdio, root markers sigil.yaml, .sigil.yaml, sigil.json, .sigil.json, sigil.toml, .sigil.toml, .git",
+      },
+    },
     { "a missing nvim-treesitter", false, false, false, { "nvim-treesitter not found" } },
     {
       "nvim-treesitter main",

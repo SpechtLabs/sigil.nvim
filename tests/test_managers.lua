@@ -68,20 +68,32 @@ T["vim.pack"] = function()
     MiniTest.skip("vim.pack installs a git commit, and the checkout has none")
   end
   local head = vim.trim(vim.system({ "git", "-C", H.root, "rev-parse", "HEAD" }, { text = true }):wait().stdout)
+  -- vim.pack reads its clone's origin/HEAD, which a clone of a detached HEAD
+  -- doesn't have, and CI checks out a pull request as a detached merge
+  -- commit. So it installs from a scratch repository with HEAD on a branch.
+  local repo = vim.fn.tempname()
+  for _, cmd in ipairs({
+    { "git", "init", "-q", "-b", "main", repo },
+    { "git", "-C", repo, "fetch", "-q", "--depth", "1", H.root, "HEAD" },
+    { "git", "-C", repo, "reset", "-q", "--hard", "FETCH_HEAD" },
+  }) do
+    local res = vim.system(cmd, { text = true }):wait()
+    H.eq({ table.concat(cmd, " "), res.code }, { table.concat(cmd, " "), 0 })
+  end
   child.boot("vim.opt.rtp:remove(vim.env.SIGIL_NVIM_ROOT)")
-  -- The commit, not the default branch: CI checks out a detached merge commit.
+  -- The commit, not the branch, so the test installs what it checks.
   child.lua(
     [[
+    local src, version = ...
     -- A fresh install each run, not the commit an earlier run installed.
     vim.fn.delete(vim.fn.stdpath("data") .. "/site/pack/core", "rf")
     vim.fn.delete(vim.fn.stdpath("config") .. "/nvim-pack-lock.json")
     -- --clean leaves the data directory out of 'packpath'; a normal start has it.
     vim.opt.packpath:prepend(vim.fn.stdpath("data") .. "/site")
-    local src = "file://" .. vim.env.SIGIL_NVIM_ROOT
-    vim.pack.add({ { src = src, name = "sigil.nvim", version = ... } }, { confirm = false })
+    vim.pack.add({ { src = src, name = "sigil.nvim", version = version } }, { confirm = false })
     require("sigil").setup()
   ]],
-    { head }
+    { "file://" .. repo, head }
   )
   child.cmd("edit " .. policy)
   H.eq({ child.bo.filetype, child.lua_get("vim.g.loaded_sigil") }, { "sigil", true })

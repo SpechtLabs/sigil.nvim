@@ -147,9 +147,9 @@ require("sigil").setup({
     enabled = true,
     -- The whole server command; nil runs `<path> lsp --stdio`.
     cmd = nil,
-    -- The nearest sigil.yaml marks the workspace, then .git.
-    root_markers = { "sigil.yaml", ".git" },
-    -- Sent to the server as its configuration.
+    -- A sigil configuration file marks the workspace, in this order, then .git.
+    root_markers = { "sigil.yaml", ".sigil.yaml", "sigil.json", ".sigil.json", "sigil.toml", ".sigil.toml", ".git" },
+    -- Sent to the server as its configuration; sigil lsp reads none today.
     settings = {},
     -- Any other vim.lsp.Config field (capabilities, on_attach, init_options,
     -- handlers, ...) is passed to vim.lsp.config("sigil", ...).
@@ -190,13 +190,13 @@ A table merges into the default; a list such as `root_markers` replaces it. An u
 return {
   cmd = { "sigil", "lsp", "--stdio" },
   filetypes = { "sigil" },
-  root_markers = { "sigil.yaml", ".git" },
+  root_markers = { "sigil.yaml", ".sigil.yaml", "sigil.json", ".sigil.json", "sigil.toml", ".sigil.toml", ".git" },
 }
 ```
 
 `setup()` layers the options over it and enables it when the binary is executable. When it isn't, the first sigil buffer shows one warning and the server stays off.
 
-The server reads the kinds that the nearest `sigil.yaml` names, and offers diagnostics, completion of inputs, fields, functions and decision payload keys, hover with a decision's signature, go-to-definition for lets and `use` targets, and formatting in `sigil fmt`'s style. Use them through Neovim's LSP mappings: `K` hovers, `CTRL-]` (or LazyVim's `gd`) jumps to a definition, `gq` and `vim.lsp.buf.format()` format.
+The server reads the kinds named in the nearest sigil configuration file (`sigil.yaml`, `.sigil.toml` or another name `sigil` reads), and offers diagnostics, completion of inputs, fields, functions and decision payload keys, hover with a decision's signature, go-to-definition for lets and `use` targets, and formatting in `sigil fmt`'s style. Use them through Neovim's LSP mappings: `K` hovers, `CTRL-]` (or LazyVim's `gd`) jumps to a definition, `gq` and `vim.lsp.buf.format()` format.
 
 **Completion.** blink.cmp registers its capabilities for every server on Neovim 0.11+. For nvim-cmp, the plugin merges `cmp_nvim_lsp`'s capabilities when that module is installed. Neither needs configuration.
 
@@ -238,7 +238,7 @@ sigil binary ~
 
 **No diagnostics or completion.** Run `:checkhealth sigil`. "isn't executable" means `sigil` isn't in the `$PATH` Neovim sees; a GUI Neovim on macOS often doesn't get your shell's `$PATH`, so set `path`. "not implemented yet" means your sigil predates the language server; upgrade it. `:Sigil log` shows what the server wrote.
 
-**The server picked the wrong workspace.** `:Sigil info` shows the root. The server reads the kinds that the nearest `sigil.yaml` above the file names; put one next to your policies, or set `lsp.root_markers`.
+**The server picked the wrong workspace.** `:Sigil info` shows the root. The server reads the kinds named in the nearest configuration file above the file; put a `sigil.yaml` next to your policies, or set `lsp.root_markers`.
 
 **sigil comes from mise in one project only.** Point the server at mise: `lsp = { cmd = { "mise", "exec", "--", "sigil", "lsp", "--stdio" } }`. mise picks the version for Neovim's working directory, so start Neovim inside the project.
 
