@@ -6,7 +6,7 @@ stylua = "2.5.2"
 lua-language-server = "3.19.1"
 # nvim-treesitter main builds parsers with it; the parser tests and the
 # install test need it.
-tree-sitter = "0.26.13"
+tree-sitter = "0.27.0"
 actionlint = "1.7.12"
 # actionlint runs shellcheck on every `run:` script when it's on PATH.
 shellcheck = "0.11.0"
