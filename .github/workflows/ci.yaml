@@ -53,7 +53,10 @@ jobs:
       - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
           version: ${{ env.MISE_VERSION }}
+      # Authenticated, so the release lookup isn't rate limited on shared runners.
       - name: Install Neovim ${{ matrix.neovim }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: mise install "neovim@${{ matrix.neovim }}"
       # The parser tests run against the grammar at the pinned revision, and
       # the install test builds it with nvim-treesitter main, which needs
