@@ -1,0 +1,2 @@
+# The workspace the end-to-end test opens: one kind file and one policy.
+kinds: [alert_routing.sigil]

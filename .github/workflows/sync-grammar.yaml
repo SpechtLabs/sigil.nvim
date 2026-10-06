@@ -1,0 +1,60 @@
+name: Sync grammar
+
+# Opens a pull request that moves the grammar pin to a sigil release and
+# copies its queries. Weekly against the latest release, or by hand against
+# any tag or commit.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: sigil tag or commit to pin (default the latest release)
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  # renovate: datasource=github-releases depName=jdx/mise extractVersion=^v(?<version>.+)$
+  MISE_VERSION: 2026.10.2
+
+jobs:
+  sync:
+    name: Sync queries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+        with:
+          version: ${{ env.MISE_VERSION }}
+      # A pull request opened with GITHUB_TOKEN gets no CI run; the same token
+      # the release workflow uses avoids that.
+      - name: Sync and open a pull request
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          REF: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          if [ -z "$REF" ]; then
+            REF="$(gh release view --repo SpechtLabs/sigil --json tagName --jq .tagName)"
+          fi
+          mise run queries -- --ref "$REF"
+          if [ -z "$(git status --porcelain -- queries lua/sigil/config.lua)" ]; then
+            echo "queries/sigil/ already matches sigil $REF"
+            exit 0
+          fi
+          branch="chore/sync-grammar-$REF"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add -A -- queries lua/sigil/config.lua
+          git commit -m "fix(treesitter): sync the queries with sigil $REF"
+          git push --force origin "$branch"
+          gh pr create --head "$branch" \
+            --title "fix(treesitter): sync the queries with sigil $REF" \
+            --body "Moves the grammar pin to sigil \`$REF\` and copies its \`editors/tree-sitter-sigil/queries\` into \`queries/sigil/\`. Users get it with the next release; \`:TSUpdate sigil\` rebuilds their parser." \
+            || echo "a pull request for $branch exists already"

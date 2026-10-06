@@ -1,0 +1,29 @@
+name: Release
+
+# release-please keeps a release pull request with the next version and the
+# changelog from the conventional commit titles. Merging it tags vX.Y.Z,
+# which lazy.nvim's `version = "*"` follows.
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  release-please:
+    name: Release Please
+    runs-on: ubuntu-latest
+    steps:
+      # GITHUB_TOKEN can't start workflows, so a release pull request it opens
+      # gets no CI run. RELEASE_PLEASE_TOKEN, a fine-grained token with read
+      # and write access to contents, pull requests and issues, fixes that.
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          config-file: .release-please-config.json
+          manifest-file: .release-please-manifest.json

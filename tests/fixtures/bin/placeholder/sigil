@@ -1,0 +1,10 @@
+#!/bin/sh
+# A stand-in for a sigil release from before the language server.
+case "$1" in
+version) echo '{"version":"v0.7.3","commit":"0000000","dirty":false}' ;;
+lsp)
+  echo 'Error: "sigil lsp" is not implemented yet' >&2
+  exit 1
+  ;;
+*) exit 2 ;;
+esac

@@ -1,0 +1,74 @@
+# .mise.toml — local tooling, exact pins. CI runs the same tasks.
+
+[tools]
+neovim = "0.12.5"
+stylua = "2.5.2"
+lua-language-server = "3.19.1"
+# nvim-treesitter main builds parsers with it; the parser tests and the
+# install test need it.
+tree-sitter = "0.26.13"
+actionlint = "1.7.12"
+# actionlint runs shellcheck on every `run:` script when it's on PATH.
+shellcheck = "0.11.0"
+# The end-to-end test runs against this release of sigil, and skips while it
+# predates `sigil lsp`. Renovate moves it to new releases.
+"github:SpechtLabs/sigil" = "0.7.3"
+
+[env]
+# A NVIM_LISTEN_ADDRESS from your shell would make the test runner take over
+# your editor's socket.
+NVIM_LISTEN_ADDRESS = ""
+
+[tasks.test]
+description = "Run the test suite headless (pass test files to run only those)"
+run = "nvim -l tests/run.lua"
+
+[tasks.fmt]
+description = "Format the Lua sources with StyLua"
+run = "stylua ."
+
+[tasks.fmt-check]
+description = "Check that the Lua sources are formatted"
+run = "stylua --check ."
+
+# lua-language-server type-checks against Neovim's own annotations, which it
+# finds through $VIMRUNTIME.
+[tasks.typecheck]
+description = "Type-check the Lua sources with lua-language-server"
+run = """
+VIMRUNTIME="$(nvim --clean --headless --cmd 'lua io.write(vim.env.VIMRUNTIME)' +q)" \
+  lua-language-server --check . --checklevel=Warning --configpath="$PWD/.luarc.json"
+"""
+
+[tasks.actionlint]
+description = "Lint the GitHub Actions workflows"
+run = "actionlint"
+
+[tasks.lint]
+description = "Formatting, types and workflows"
+depends = ["fmt-check", "typecheck", "actionlint"]
+
+[tasks.queries]
+description = "Copy the tree-sitter queries from the pinned sigil revision (--ref REF moves the pin)"
+run = "nvim -l scripts/sync-grammar.lua"
+
+[tasks.queries-check]
+description = "Check that queries/sigil/ matches the pinned sigil revision"
+run = "nvim -l scripts/sync-grammar.lua --check"
+
+[tasks.check]
+description = "Everything CI runs"
+depends = ["lint", "queries-check", "test"]
+
+# The parser tests (SIGIL_TEST_PARSER) need a parser built from the pinned
+# revision, the way nvim-treesitter main builds it.
+[tasks.parser]
+description = "Build the sigil parser at the pinned revision into .tests/parser/sigil.so"
+run = """
+set -eu
+rev="$(sed -n 's/^M.grammar_revision = "\\(.*\\)"$/\\1/p' lua/sigil/config.lua)"
+src=.tests/parser/src
+rm -rf "$src" && mkdir -p "$src"
+curl -fsSL "https://github.com/SpechtLabs/sigil/archive/$rev.tar.gz" | tar -xz -C "$src" --strip-components=1
+tree-sitter build -o .tests/parser/sigil.so "$src/editors/tree-sitter-sigil"
+"""

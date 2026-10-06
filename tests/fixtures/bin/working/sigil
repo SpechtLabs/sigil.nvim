@@ -1,0 +1,7 @@
+#!/bin/sh
+# A stand-in for a sigil release with a language server.
+case "$1" in
+version) echo '{"version":"v9.9.9-test","commit":"0000000","dirty":false}' ;;
+lsp) exec "$SIGIL_TEST_NVIM" --clean -l "$SIGIL_NVIM_ROOT/tests/fixtures/fake_server.lua" ;;
+*) exit 2 ;;
+esac

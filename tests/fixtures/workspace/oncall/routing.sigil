@@ -1,0 +1,5 @@
+policy oncall.routing: AlertRouting@1
+
+when alert.severity == critical {
+  page(reason: critical_alert, target: team.oncall)
+}

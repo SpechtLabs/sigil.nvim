@@ -1,0 +1,33 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    "helpers:pinGitHubActionDigests",
+    "customManagers:githubActionsVersions"
+  ],
+  "timezone": "Europe/Berlin",
+  "semanticCommitType": "chore",
+  "semanticCommitScope": "deps",
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Automerge digest, pin, patch and minor updates once CI passes.",
+      "matchUpdateTypes": ["digest", "pin", "pinDigest", "patch", "minor"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "description": "mise is pinned as MISE_VERSION in every workflow; move them at once.",
+      "matchDepNames": ["jdx/mise"],
+      "groupName": "mise",
+      "minimumReleaseAge": "1 day"
+    },
+    {
+      "description": "Group GitHub Actions updates together.",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions"
+    }
+  ]
+}

@@ -1,0 +1,285 @@
+*sigil.txt*  Sigil policy language support for Neovim
+
+==============================================================================
+CONTENTS                                                    *sigil.nvim* *sigil*
+
+  1. Requirements ........................................ |sigil-requirements|
+  2. Installation ........................................ |sigil-install|
+  3. Setup ............................................... |sigil-setup|
+  4. Options ............................................. |sigil-config|
+  5. Language server ..................................... |sigil-lsp|
+  6. Tree-sitter ......................................... |sigil-treesitter|
+  7. Commands ............................................ |sigil-commands|
+  8. Health check ........................................ |sigil-health|
+  9. Filetype settings ................................... |sigil-filetype|
+ 10. Troubleshooting ..................................... |sigil-troubleshooting|
+
+sigil.nvim adds the `sigil` filetype for `*.sigil` policy and kind files,
+starts the Sigil language server (`sigil lsp`) in them, and registers the Sigil
+tree-sitter parser with nvim-treesitter. Without nvim-treesitter or the parser,
+sigil buffers keep regex highlighting, comments and the language server.
+
+Sigil: https://sigil.specht-labs.de
+Plugin: https://github.com/SpechtLabs/sigil.nvim
+
+==============================================================================
+1. REQUIREMENTS                                           *sigil-requirements*
+
+- Neovim 0.11 or later. Tree-sitter with nvim-treesitter's `main` branch needs
+  Neovim 0.12.
+- The `sigil` binary in `$PATH`, from a release with the language server:
+>sh
+    brew install --cask spechtlabs/tap/sigil
+    # or
+    mise use -g github:SpechtLabs/sigil
+<
+  The plugin never downloads it. Set |sigil-config-path| to use one outside
+  `$PATH`.
+- Optional: nvim-treesitter (`main`, or the frozen `master`), and for `main`
+  the tree-sitter CLI 0.26.1 or later, `curl`, `tar` and a C compiler, which
+  nvim-treesitter builds the parser with.
+
+==============================================================================
+2. INSTALLATION                                                *sigil-install*
+
+lazy.nvim, also under LazyVim: >lua
+    { "SpechtLabs/sigil.nvim" }
+<
+The plugin's `lazy.lua` makes this load at startup and call |sigil.setup()|.
+Add `opts = { ... }` to change options, and `version = "*"` to follow
+releases instead of the default branch.
+
+vim.pack (Neovim 0.12): >lua
+    vim.pack.add({ "https://github.com/SpechtLabs/sigil.nvim" })
+<
+vim-plug: >vim
+    Plug 'SpechtLabs/sigil.nvim'
+<
+mini.deps: >lua
+    MiniDeps.add({ source = "SpechtLabs/sigil.nvim" })
+<
+Any other manager works the same way: put the plugin on 'runtimepath'. No
+`setup()` call is needed; the first sigil buffer applies the defaults and
+|g:sigil|.
+
+==============================================================================
+3. SETUP                                                         *sigil-setup*
+
+                                                               *sigil.setup()*
+require("sigil").setup({opts})
+    Merges {opts} over the defaults and |g:sigil|, configures and enables
+    the language server, and registers the parser. Calling it again replaces
+    the options. An unknown option or a value of the wrong type is reported
+    with |vim.notify()| and leaves the options as they were.
+
+                                                                     *g:sigil*
+vim.g.sigil
+    The same table as {opts}, for setups without a `setup()` call. Set it
+    before the first sigil buffer opens. {opts} wins over it.
+
+==============================================================================
+4. OPTIONS                                                      *sigil-config*
+
+Defaults: >lua
+    require("sigil").setup({
+      path = "sigil",
+      lsp = {
+        enabled = true,
+        cmd = nil,
+        root_markers = { "sigil.yaml", ".git" },
+        settings = {},
+      },
+      treesitter = {
+        enabled = true,
+        ensure_installed = true,
+        highlight = true,
+        indent = true,
+        fold = false,
+        url = "https://github.com/SpechtLabs/sigil",
+        location = "editors/tree-sitter-sigil",
+        revision = "<the commit this release pins>",
+        path = nil,
+      },
+    })
+<
+A table merges into the default; a list such as `root_markers` replaces it.
+
+                                                           *sigil-config-path*
+path ~
+    The sigil binary: a name looked up in `$PATH`, or a path. The language
+    server runs `<path> lsp --stdio`, and |:checkhealth| runs
+    `<path> version`.
+
+                                                    *sigil-config-lsp.enabled*
+lsp.enabled ~
+    Start the language server in sigil buffers. `false` stops running
+    clients.
+
+                                                        *sigil-config-lsp.cmd*
+lsp.cmd ~
+    The whole server command, instead of `<path> lsp --stdio`, e.g.
+    `{ "mise", "exec", "--", "sigil", "lsp", "--stdio" }`. A function works
+    too, as in |vim.lsp.Config|.
+
+                                               *sigil-config-lsp.root_markers*
+lsp.root_markers ~
+    Files that mark the workspace root, nearest first in list order:
+    `sigil.yaml` anywhere above the file, then `.git`. A file with neither
+    gets a server without a workspace folder.
+
+                                                   *sigil-config-lsp.settings*
+lsp.settings ~
+    What the server gets for `workspace/configuration` requests and with
+    `workspace/didChangeConfiguration`.
+
+Any other |vim.lsp.Config| field under `lsp`, such as `capabilities`,
+`on_attach`, `init_options` or `handlers`, is passed to `vim.lsp.config()`.
+
+                                             *sigil-config-treesitter.enabled*
+treesitter.enabled ~
+    Let the plugin handle tree-sitter: register the parser, install it, and
+    start highlighting, indentation and folding. `false` leaves all of it to
+    you or your distribution.
+
+                                    *sigil-config-treesitter.ensure_installed*
+treesitter.ensure_installed ~
+    In the first sigil buffer of a session, build the parser with
+    nvim-treesitter `main` when it's missing and the tree-sitter CLI is
+    there. With `master`, run `:TSInstall sigil` yourself.
+
+                                           *sigil-config-treesitter.highlight*
+treesitter.highlight ~
+    Call |vim.treesitter.start()| in sigil buffers once the parser is
+    installed. It replaces the regex highlighting.
+
+                                              *sigil-config-treesitter.indent*
+treesitter.indent ~
+    Set 'indentexpr' to nvim-treesitter's when the parser and an indents
+    query are there.
+
+                                                *sigil-config-treesitter.fold*
+treesitter.fold ~
+    Set 'foldmethod' to `expr` and 'foldexpr' to |vim.treesitter.foldexpr()|.
+
+                                                 *sigil-config-treesitter.url*
+                                            *sigil-config-treesitter.location*
+                                            *sigil-config-treesitter.revision*
+treesitter.url, treesitter.location, treesitter.revision ~
+    Where nvim-treesitter downloads the grammar: the repository, the
+    grammar's directory in it and the commit or tag. Each release of the
+    plugin pins the revision its `queries/sigil/` were copied from. A
+    branch works only without a `/` in its name.
+
+                                                *sigil-config-treesitter.path*
+treesitter.path ~
+    A local checkout of the grammar directory, built as it is. Overrides
+    `url` and `revision`. For grammar development.
+
+==============================================================================
+5. LANGUAGE SERVER                                                 *sigil-lsp*
+
+The plugin ships `lsp/sigil.lua`, so `vim.lsp.config.sigil` exists on Neovim
+0.11+ and `vim.lsp.enable("sigil")` works without the rest of the plugin.
+|sigil.setup()| layers the options over it and enables it when the binary is
+found. When it isn't, the first sigil buffer shows one warning, and the
+server stays off.
+
+The server gives diagnostics, completion, hover, go-to-definition and
+formatting. Use them through Neovim's LSP mappings (|lsp-defaults|):
+`K` hovers, CTRL-] or `gd` (LazyVim) jumps, |gq| and
+|vim.lsp.buf.format()| format.
+
+Completion ~
+blink.cmp registers its capabilities for every server on Neovim 0.11+.
+For nvim-cmp the plugin merges `cmp_nvim_lsp`'s capabilities when that
+module is installed. Neither needs configuration.
+
+Formatting with conform.nvim ~
+With `lsp_format = "fallback"`, as LazyVim sets it, conform formats sigil
+buffers through the server. To run `sigil fmt` directly: >lua
+    require("conform").setup({
+      formatters_by_ft = { sigil = { "sigil_fmt" } },
+      formatters = {
+        sigil_fmt = { command = "sigil", args = { "fmt", "-" }, stdin = true },
+      },
+    })
+<
+==============================================================================
+6. TREE-SITTER                                              *sigil-treesitter*
+
+The parser is `sigil`, the grammar lives in `editors/tree-sitter-sigil` of
+the Sigil repository, and the plugin carries its queries in `queries/sigil/`.
+
+nvim-treesitter `main` ~
+The plugin adds `sigil` to nvim-treesitter's parser table whenever
+nvim-treesitter fires `User TSUpdate`, so `:TSInstall sigil`, `:TSUpdate` and
+`require("nvim-treesitter").install({ "sigil" })` know it. nvim-treesitter
+also installs the grammar's queries next to the parser, ahead of the plugin's
+copies, so the queries always match the parser it built. The first sigil
+buffer installs it with |sigil-config-treesitter.ensure_installed|. Under
+LazyVim you can also add it to nvim-treesitter's `ensure_installed`: >lua
+    { "nvim-treesitter/nvim-treesitter", opts = { ensure_installed = { "sigil" } } }
+<
+nvim-treesitter `master` ~
+The plugin registers the parser in the first sigil buffer and in
+|sigil.setup()| when nvim-treesitter is loaded. Then run `:TSInstall sigil`.
+
+Without nvim-treesitter ~
+Build the parser yourself and put `parser/sigil.so` on 'runtimepath'. Until
+then `syntax/sigil.vim` highlights keywords, literals, comments and
+declarations.
+
+==============================================================================
+7. COMMANDS                                                   *sigil-commands*
+
+                                                                      *:Sigil*
+:Sigil [info]   Show the binary, the server command, the client attached to
+                the current buffer and its root, and the tree-sitter state.
+:Sigil restart  Stop the sigil clients and start them again, e.g. after
+                upgrading sigil or editing `sigil.yaml`.
+:Sigil log      Open the LSP log in a new tab.
+
+==============================================================================
+8. HEALTH CHECK                                                 *sigil-health*
+
+`:checkhealth sigil` checks:
+
+- the Neovim version and that `*.sigil` files get the `sigil` filetype,
+- the binary: where it is, `sigil version`, and whether `sigil lsp --stdio`
+  answers `initialize`; a release from before the language server exits with
+  `"sigil lsp" is not implemented yet`,
+- the LSP config and the running clients with their roots,
+- nvim-treesitter, the tree-sitter CLI, the parser and each query.
+
+==============================================================================
+9. FILETYPE SETTINGS                                          *sigil-filetype*
+
+`ftplugin/sigil.lua` sets 'commentstring' to `// %s` and 'comments' to `://`,
+so |gc| comments lines, and the indentation `sigil fmt` uses: 'expandtab',
+'shiftwidth' 2, 'softtabstop' 2, 'tabstop' 2, with 'smartindent' until the
+tree-sitter indents query takes over.
+
+                                                   *g:sigil_recommended_style*
+Set `vim.g.sigil_recommended_style = false` to keep your own indentation
+options.
+
+==============================================================================
+10. TROUBLESHOOTING                                    *sigil-troubleshooting*
+
+No diagnostics or completion ~
+Run `:checkhealth sigil`. `sigil isn't executable` means it isn't in the
+`$PATH` Neovim sees; GUI Neovims on macOS often don't get your shell's
+`$PATH`, so set |sigil-config-path|. `not implemented yet` means your sigil
+predates the language server; upgrade it.
+
+Wrong workspace ~
+`:Sigil info` shows the root. The server reads the kinds named in the
+nearest `sigil.yaml`; put one next to your policies, or change
+|sigil-config-lsp.root_markers|.
+
+No tree-sitter highlighting ~
+`:checkhealth sigil` says whether the parser and the highlights query are
+there. After the plugin updates, run `:TSUpdate sigil` to build the grammar
+revision the new release pins.
+
+ vim:tw=78:ts=8:ft=help:norl:
