@@ -40,24 +40,37 @@ jobs:
           version: ${{ env.MISE_VERSION }}
       - run: mise run queries-check
 
+  # The job names are what the main branch ruleset requires, so they name a
+  # channel, not a version that Renovate moves.
   test:
-    name: Test (Neovim ${{ matrix.neovim }})
+    name: Test (Neovim ${{ matrix.channel }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        # The oldest supported release, the pinned stable one, and nightly.
-        neovim: ["0.11.7", "0.12.5", "nightly"]
+        include:
+          # The oldest release the plugin supports. Renovate moves it to the
+          # newest patch of that series (see renovate.json); dropping a series
+          # is a decision, not an update.
+          - channel: oldest
+            # renovate: datasource=github-releases depName=neovim/neovim extractVersion=^v(?<version>.+)$
+            NEOVIM_VERSION: "0.11.7"
+          # The release .mise.toml pins, which Renovate keeps current.
+          - channel: stable
+            NEOVIM_VERSION: ""
+          - channel: nightly
+            NEOVIM_VERSION: nightly
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
           version: ${{ env.MISE_VERSION }}
       # Authenticated, so the release lookup isn't rate limited on shared runners.
-      - name: Install Neovim ${{ matrix.neovim }}
+      - name: Install Neovim ${{ matrix.NEOVIM_VERSION }}
+        if: matrix.NEOVIM_VERSION != ''
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: mise install "neovim@${{ matrix.neovim }}"
+        run: mise install "neovim@${{ matrix.NEOVIM_VERSION }}"
       # The parser tests run against the grammar at the pinned revision, and
       # the install test builds it with nvim-treesitter main, which needs
       # Neovim 0.12.
@@ -65,6 +78,9 @@ jobs:
         run: mise run parser
       - name: Test
         env:
+          NEOVIM_VERSION: ${{ matrix.NEOVIM_VERSION }}
           SIGIL_TEST_PARSER: ${{ github.workspace }}/.tests/parser/sigil.so
-          SIGIL_TEST_INSTALL: ${{ matrix.neovim != '0.11.7' && '1' || '' }}
-        run: mise exec "neovim@${{ matrix.neovim }}" -- nvim -l tests/run.lua
+          SIGIL_TEST_INSTALL: ${{ matrix.channel != 'oldest' && '1' || '' }}
+        run: |
+          mise exec ${NEOVIM_VERSION:+"neovim@$NEOVIM_VERSION"} -- nvim --version | head -1
+          mise exec ${NEOVIM_VERSION:+"neovim@$NEOVIM_VERSION"} -- nvim -l tests/run.lua
