@@ -12,7 +12,7 @@ actionlint = "1.7.12"
 shellcheck = "0.11.0"
 # The end-to-end test runs against this release of sigil, and skips while it
 # predates `sigil lsp`. Renovate moves it to new releases.
-"github:SpechtLabs/sigil" = "0.7.3"
+"github:SpechtLabs/sigil" = "0.8.0"
 
 [env]
 # A NVIM_LISTEN_ADDRESS from your shell would make the test runner take over
