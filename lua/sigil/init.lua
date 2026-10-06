@@ -7,6 +7,10 @@ local config = require("sigil.config")
 
 local M = {}
 
+-- The plugin's version, for bug reports. release-please rewrites it in each
+-- release pull request.
+M.version = "0.0.0" -- x-release-please-version
+
 local configured = false
 
 --- Applies the options: merges them over the defaults and `vim.g.sigil`,
@@ -55,7 +59,7 @@ function M.info(buf)
   local cmd = config.lsp_cmd(options)
   local path, checkable = lsp.executable(options)
   local lines = {
-    "sigil.nvim",
+    "sigil.nvim " .. M.version,
     ("  binary:      %s"):format(
       (not checkable and "custom cmd function") or path or ("not found (" .. lsp.install_hint .. ")")
     ),

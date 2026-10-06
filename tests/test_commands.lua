@@ -21,6 +21,7 @@ T[":Sigil info"]["without a binary"] = function()
   H.eq(out:find("binary:      not found (brew install --cask spechtlabs/tap/sigil", 1, true) ~= nil, true)
   H.eq(out:find("client:      not attached to this buffer", 1, true) ~= nil, true)
   H.eq(out:find("tree-sitter: parser missing, nvim-treesitter not loaded, highlighting off", 1, true) ~= nil, true)
+  H.eq(out:find("sigil.nvim " .. child.lua_get("require('sigil').version"), 1, true) ~= nil, true)
 end
 
 T[":Sigil info"]["with a server"] = function()
