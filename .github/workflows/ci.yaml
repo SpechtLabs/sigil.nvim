@@ -13,7 +13,7 @@ permissions:
 env:
   # mise itself, pinned like the tools it installs.
   # renovate: datasource=github-releases depName=jdx/mise extractVersion=^v(?<version>.+)$
-  MISE_VERSION: 2026.10.2
+  MISE_VERSION: 2026.10.3
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
