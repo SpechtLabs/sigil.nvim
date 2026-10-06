@@ -20,7 +20,12 @@ T["client_config()"] = MiniTest.new_set({
       "conf.cmd",
       { "mise", "x", "--", "sigil", "lsp" },
     },
-    { "the root markers", {}, "conf.root_markers", { "sigil.yaml", ".git" } },
+    {
+      "the root markers",
+      {},
+      "conf.root_markers",
+      { "sigil.yaml", ".sigil.yaml", "sigil.json", ".sigil.json", "sigil.toml", ".sigil.toml", ".git" },
+    },
     { "other root markers", { lsp = { root_markers = { "policies" } } }, "conf.root_markers", { "policies" } },
     {
       "settings",
@@ -108,6 +113,11 @@ end
 T["with a server"]["root"] = MiniTest.new_set({
   parametrize = {
     { "sigil.yaml", vim.fs.joinpath("tests", "fixtures", "workspace", "oncall", "routing.sigil"), H.workspace },
+    {
+      ".sigil.toml",
+      vim.fs.joinpath("tests", "fixtures", "toml", "routing.sigil"),
+      vim.fs.joinpath(H.fixtures, "toml"),
+    },
     { ".git", vim.fs.joinpath("tests", "fixtures", "loose.sigil"), H.root },
   },
 })

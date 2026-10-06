@@ -5,5 +5,5 @@
 return {
   cmd = { "sigil", "lsp", "--stdio" },
   filetypes = { "sigil" },
-  root_markers = { "sigil.yaml", ".git" },
+  root_markers = { "sigil.yaml", ".sigil.yaml", "sigil.json", ".sigil.json", "sigil.toml", ".sigil.toml", ".git" },
 }
