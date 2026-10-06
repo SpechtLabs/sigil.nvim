@@ -242,6 +242,8 @@ sigil binary ~
 
 **sigil comes from mise in one project only.** Point the server at mise: `lsp = { cmd = { "mise", "exec", "--", "sigil", "lsp", "--stdio" } }`. mise picks the version for Neovim's working directory, so start Neovim inside the project.
 
+**A kind file changed outside Neovim isn't picked up (Linux).** The server asks the editor to watch `*.sigil` and the sigil configuration files, but Neovim only offers file watching on macOS and Windows. On Linux, install `inotify-tools` and opt in with `lsp = { capabilities = { workspace = { didChangeWatchedFiles = { dynamicRegistration = true } } } }`, or run `:Sigil restart` after such a change.
+
 **No tree-sitter highlighting.** `:checkhealth sigil` says whether nvim-treesitter, the tree-sitter CLI, the parser and the highlights query are there. `:TSLog` shows why a build failed.
 
 **Highlighting looks old after an update.** Run `:TSUpdate sigil` to build the grammar revision the new release pins.
