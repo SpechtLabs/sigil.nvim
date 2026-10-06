@@ -279,6 +279,12 @@ Wrong workspace ~
 nearest sigil configuration file; put one next to your policies, or change
 |sigil-config-lsp.root_markers|.
 
+Changes made outside Neovim aren't seen (Linux) ~
+The server asks to watch `*.sigil` and the configuration files, which Neovim
+only allows on macOS and Windows. On Linux, install `inotify-tools` and set
+`lsp = { capabilities = { workspace = { didChangeWatchedFiles = {
+dynamicRegistration = true } } } }`, or run `:Sigil restart`.
+
 No tree-sitter highlighting ~
 `:checkhealth sigil` says whether the parser and the highlights query are
 there. After the plugin updates, run `:TSUpdate sigil` to build the grammar
