@@ -16,18 +16,34 @@ local root =
   vim.fs.dirname(vim.fs.dirname(vim.fs.normalize(vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p"))))
 local deps = vim.fs.joinpath(root, ".tests", "deps")
 
--- Renovate doesn't see these; bump them by hand.
+-- Renovate keeps these current through the custom manager in renovate.json,
+-- which reads the comment above each entry: a git-tags pin follows new
+-- releases, a git-refs pin its branch's newest commit.
 local pins = {
-  ["mini.test"] = { "https://github.com/nvim-mini/mini.test", "a9e23fd2033ada30a53a32d1c73629351c2750f3" }, -- v0.9.0
-  ["lazy.nvim"] = { "https://github.com/folke/lazy.nvim", "85c7ff3711b730b4030d03144f6db6375044ae82" }, -- v11.17.5
+  -- renovate: datasource=git-tags
+  ["mini.test"] = {
+    url = "https://github.com/nvim-mini/mini.test",
+    ref = "v0.9.0",
+    commit = "a9e23fd2033ada30a53a32d1c73629351c2750f3",
+  },
+  -- renovate: datasource=git-tags
+  ["lazy.nvim"] = {
+    url = "https://github.com/folke/lazy.nvim",
+    ref = "v11.17.5",
+    commit = "85c7ff3711b730b4030d03144f6db6375044ae82",
+  },
+  -- renovate: datasource=git-refs
   ["nvim-treesitter"] = {
-    "https://github.com/nvim-treesitter/nvim-treesitter",
-    "e289100ff98969e118c702199d88b764ce9e7fdf",
-  }, -- main
+    url = "https://github.com/nvim-treesitter/nvim-treesitter",
+    ref = "main",
+    commit = "e289100ff98969e118c702199d88b764ce9e7fdf",
+  },
+  -- renovate: datasource=git-refs
   ["nvim-treesitter-master"] = {
-    "https://github.com/nvim-treesitter/nvim-treesitter",
-    "cf12346a3414fa1b06af75c79faebe7f76df080a",
-  }, -- master
+    url = "https://github.com/nvim-treesitter/nvim-treesitter",
+    ref = "master",
+    commit = "cf12346a3414fa1b06af75c79faebe7f76df080a",
+  },
 }
 
 local function git(args, cwd, may_fail)
@@ -46,11 +62,11 @@ for name, pin in pairs(pins) do
   if not vim.uv.fs_stat(dir) then
     vim.fn.mkdir(dir, "p")
     git({ "init", "-q" }, dir)
-    git({ "remote", "add", "origin", pin[1] }, dir)
+    git({ "remote", "add", "origin", pin.url }, dir)
   end
-  if git({ "rev-parse", "--verify", "-q", "HEAD" }, dir, true) ~= pin[2] then
-    io.stdout:write(("fetching %s at %s\n"):format(name, pin[2]:sub(1, 12)))
-    git({ "fetch", "-q", "--depth", "1", "origin", pin[2] }, dir)
+  if git({ "rev-parse", "--verify", "-q", "HEAD" }, dir, true) ~= pin.commit then
+    io.stdout:write(("fetching %s at %s\n"):format(name, pin.commit:sub(1, 12)))
+    git({ "fetch", "-q", "--depth", "1", "origin", pin.commit }, dir)
     git({ "checkout", "-q", "--force", "FETCH_HEAD" }, dir)
   end
 end

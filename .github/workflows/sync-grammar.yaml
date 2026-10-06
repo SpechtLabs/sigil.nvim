@@ -1,8 +1,9 @@
 name: Sync grammar
 
 # Opens a pull request that moves the grammar pin to a sigil release and
-# copies its queries. Weekly against the latest release, or by hand against
-# any tag or commit.
+# copies its queries, and enables auto-merge on it, so a grammar bump that
+# passes the required checks lands and goes out with the next release. Weekly
+# against the latest release, or by hand against any tag or commit.
 
 on:
   schedule:
@@ -27,20 +28,37 @@ jobs:
     name: Sync queries
     runs-on: ubuntu-latest
     steps:
+      # Pushes and pull requests made with GITHUB_TOKEN start no workflows, so
+      # the pull request would get no CI run and auto-merge would never fire.
+      # RELEASE_PLEASE_TOKEN, the token the release workflow uses, avoids
+      # both; without it the pull request waits for a person.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
       - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
           version: ${{ env.MISE_VERSION }}
-      # A pull request opened with GITHUB_TOKEN gets no CI run; the same token
-      # the release workflow uses avoids that.
-      - name: Sync and open a pull request
+      - name: Sync, open a pull request and enable auto-merge
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+          HAS_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN != '' }}
           REF: ${{ inputs.ref }}
         run: |
           set -euo pipefail
+          pin="$(sed -n 's/^M.grammar_revision = "\(.*\)"$/\1/p' lua/sigil/config.lua)"
           if [ -z "$REF" ]; then
             REF="$(gh release view --repo SpechtLabs/sigil --json tagName --jq .tagName)"
+            # A scheduled run only moves the pin forward, and only to a release
+            # that has the grammar; an older release isn't an update.
+            status="$(gh api "repos/SpechtLabs/sigil/compare/$pin...$REF" --jq .status)"
+            if [ "$status" != "ahead" ]; then
+              echo "sigil $REF isn't ahead of the pinned $pin ($status); nothing to sync"
+              exit 0
+            fi
+            if ! gh api "repos/SpechtLabs/sigil/contents/editors/tree-sitter-sigil/queries?ref=$REF" --silent; then
+              echo "sigil $REF has no tree-sitter grammar; nothing to sync"
+              exit 0
+            fi
           fi
           mise run queries -- --ref "$REF"
           if [ -z "$(git status --porcelain -- queries lua/sigil/config.lua)" ]; then
@@ -48,13 +66,18 @@ jobs:
             exit 0
           fi
           branch="chore/sync-grammar-$REF"
+          title="fix(treesitter): sync the queries with sigil $REF"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -c "$branch"
           git add -A -- queries lua/sigil/config.lua
-          git commit -m "fix(treesitter): sync the queries with sigil $REF"
+          git commit -m "$title"
           git push --force origin "$branch"
-          gh pr create --head "$branch" \
-            --title "fix(treesitter): sync the queries with sigil $REF" \
-            --body "Moves the grammar pin to sigil \`$REF\` and copies its \`editors/tree-sitter-sigil/queries\` into \`queries/sigil/\`. Users get it with the next release; \`:TSUpdate sigil\` rebuilds their parser." \
+          gh pr create --head "$branch" --title "$title" \
+            --body "Moves the grammar pin to sigil \`$REF\` and copies its \`editors/tree-sitter-sigil/queries\` into \`queries/sigil/\`. It merges itself once the required checks pass, and the next release ships it; \`:TSUpdate sigil\` rebuilds users' parsers." \
             || echo "a pull request for $branch exists already"
+          if [ "$HAS_TOKEN" = "true" ]; then
+            gh pr merge "$branch" --auto --squash
+          else
+            echo "::warning::RELEASE_PLEASE_TOKEN isn't set, so the pull request gets no CI run and no auto-merge; merge it by hand"
+          fi

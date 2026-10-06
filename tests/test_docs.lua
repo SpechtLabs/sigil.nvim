@@ -66,4 +66,23 @@ T[":help sigil opens the plugin's help"] = function()
   H.eq(vim.fs.basename(child.api.nvim_buf_get_name(0)), "sigil.txt")
 end
 
+-- release-please writes the version into lua/sigil/init.lua, through the
+-- marker on its line and the extra-files entry; a release that skipped it
+-- would leave the two apart.
+T["the version is the one release-please manages"] = function()
+  local manifest = vim.json.decode(read(".release-please-manifest.json"))
+  local config = vim.json.decode(read(".release-please-config.json"))
+  local version = child.lua_get("require('sigil').version")
+  H.eq(version:match("^%d+%.%d+%.%d+$") ~= nil, true)
+  H.eq(version, manifest["."] or "0.0.0")
+  local files = vim.tbl_map(function(f)
+    return f.path
+  end, config.packages["."]["extra-files"])
+  H.eq(vim.tbl_contains(files, "lua/sigil/init.lua"), true)
+  H.eq(
+    read("lua/sigil/init.lua"):find('M.version = "' .. version .. '" -- x-release-please-version', 1, true) ~= nil,
+    true
+  )
+end
+
 return T

@@ -26,6 +26,7 @@ end
 
 local function check_neovim()
   health.start("sigil.nvim")
+  health.info("sigil.nvim " .. require("sigil").version)
   local v = vim.version()
   local version = ("%d.%d.%d"):format(v.major, v.minor, v.patch)
   if vim.fn.has("nvim-0.11") == 1 then

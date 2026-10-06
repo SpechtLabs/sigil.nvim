@@ -10,13 +10,37 @@
   "semanticCommitType": "chore",
   "semanticCommitScope": "deps",
   "labels": ["dependencies"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "The test dependencies tests/run.lua clones at pinned commits. The comment above each entry names the datasource: git-tags follows releases, git-refs a branch's newest commit.",
+      "managerFilePatterns": ["/^tests/run\\.lua$/"],
+      "matchStrings": [
+        "-- renovate: datasource=(?<datasource>git-tags|git-refs)\\s+\\[\"[^\"]+\"\\] = \\{\\s*url = \"(?<packageName>[^\"]+)\",\\s*ref = \"(?<currentValue>[^\"]+)\",\\s*commit = \"(?<currentDigest>[0-9a-f]{40})\""
+      ],
+      "depNameTemplate": "{{{packageName}}}"
+    }
+  ],
   "packageRules": [
     {
-      "description": "Automerge digest, pin, patch and minor updates once CI passes.",
+      "description": "Automerge digest, pin, patch and minor updates once CI passes: the mise pins (neovim, the github:SpechtLabs/sigil release the end-to-end tests run against, the linters), the oldest Neovim in ci.yaml, the test dependencies in tests/run.lua and the actions. Majors wait for a person.",
       "matchUpdateTypes": ["digest", "pin", "pinDigest", "patch", "minor"],
       "automerge": true,
       "automergeType": "pr",
       "platformAutomerge": true
+    },
+    {
+      "description": "ci.yaml's oldest Neovim stays in the oldest supported series; raising the series drops support and is done by hand.",
+      "matchFileNames": [".github/workflows/ci.yaml"],
+      "matchDepNames": ["neovim/neovim"],
+      "allowedVersions": "<0.12.0"
+    },
+    {
+      "description": "The test dependencies move weekly and together; nvim-treesitter's main branch gets several commits a day.",
+      "matchFileNames": ["tests/run.lua"],
+      "groupName": "test dependencies",
+      "groupSlug": "test-dependencies",
+      "schedule": ["before 6am on monday"]
     },
     {
       "description": "mise is pinned as MISE_VERSION in every workflow; move them at once.",
