@@ -1,7 +1,7 @@
 # .mise.toml — local tooling, exact pins. CI runs the same tasks.
 
 [tools]
-neovim = "0.12.5"
+neovim = "0.12.6"
 stylua = "2.5.2"
 lua-language-server = "3.19.1"
 # nvim-treesitter main builds parsers with it; the parser tests and the
