@@ -3,7 +3,7 @@
 [tools]
 neovim = "0.12.5"
 stylua = "2.5.2"
-lua-language-server = "3.19.1"
+lua-language-server = "3.19.2"
 # nvim-treesitter main builds parsers with it; the parser tests and the
 # install test need it.
 tree-sitter = "0.27.0"
