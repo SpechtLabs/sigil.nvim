@@ -42,7 +42,7 @@ local M = {}
 -- commit on sigil's main or a release tag. Move it with
 -- `mise run queries -- --ref <tag or commit>`, which rewrites this line and
 -- the queries together (README, "Moving the grammar pin").
-M.grammar_revision = "b13b0507dd978c86139a56a160ba65de3a896fa5"
+M.grammar_revision = "1251fa5c1da6ade762a25dceecad50d667e54175"
 
 ---@type sigil.Options
 M.defaults = {
